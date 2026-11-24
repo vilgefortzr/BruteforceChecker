@@ -1,7 +1,6 @@
 /* SHA-256 adapted from Edward Eldridge's implementation
-   (https://github.com/EddieEldridge/SHA256-in-C, per FIPS 180-4).
-   The file-reading front end is replaced with an in-memory buffer so it
-   fits the bfc_* API; the core (K, schedule, compression) is unchanged. */
+   (https://github.com/EddieEldridge/SHA256-in-C, per FIPS 180-4). */
+   
 #include "sha256.h"
 #include <string.h>
 #include <stdlib.h>
