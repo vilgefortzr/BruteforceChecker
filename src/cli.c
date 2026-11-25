@@ -149,12 +149,12 @@ int bfc_parse_args(int argc, char **argv, bfc_options_t *opt) {
             mode_given = 1;
         } else if (strcmp(arg, "--mask") == 0) {
             if (!mask_flag_seen) {
-                /* 1st occurrence: selects the mode, per §4 of the SPEC. */
+                /* First --mask selects the mode. */
                 opt->mode = MODE_MASK;
                 mode_given = 1;
                 mask_flag_seen = 1;
             } else {
-                /* 2nd occurrence: carries the mask pattern value. */
+                /* Second --mask carries the pattern. */
                 const char *v = bfc_next_value(argc, argv, i, "--mask");
                 if (v == NULL) return 1;
                 i++;

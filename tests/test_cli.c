@@ -1,9 +1,5 @@
-/* test_cli.c -- owner: Anastasia. Basic sanity checks for cli.c.
- *
- * Not wired into the main Makefile target (the project builds a single
- * `bfc` binary straight from all of src), so compile and run it by hand:
- *   cc -std=c11 -Wall -Wextra -Iinclude \
- *      tests/test_cli.c src/cli.c src/analyze.c -o /tmp/test_cli -lm
+/* Sanity checks for cli.c. Build and run by hand:
+ *   cc -std=c11 -Wall -Wextra -Iinclude tests/test_cli.c src/cli.c -o /tmp/test_cli
  *   /tmp/test_cli
  */
 
