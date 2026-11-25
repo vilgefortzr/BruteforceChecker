@@ -23,6 +23,17 @@ static double now_seconds(void) {
     return (double)ts.tv_sec + (double)ts.tv_nsec / 1e9;
 }
 
+#define BFC_PROGRESS_STEP (1u << 22)   /* ~4.2M candidates between updates */
+
+/* Live progress line on stderr; stdout stays clean for the final result. */
+static void show_progress(const char *label, uint64_t attempts, double t0) {
+    double elapsed = now_seconds() - t0;
+    double mps = (elapsed > 0.0) ? (double)attempts / elapsed / 1e6 : 0.0;
+    fprintf(stderr, "\r[%s] %llu candidates tried, %.2f M/s ...   ",
+            label, (unsigned long long)attempts, mps);
+    fflush(stderr);
+}
+
 /* Builds the working alphabet from a bfc_charset_t bitmask. Returns its size. */
 static int build_alphabet(int charset, char *out) {
     int n = 0;
@@ -53,7 +64,8 @@ static int try_candidate(const uint8_t target[BFC_HASH_LEN], const char *candida
    given length. positions[i] is the alphabet for column i, sizes[i] its
    length. Returns 1 if a match was found (result filled). */
 static int sweep(const uint8_t target[BFC_HASH_LEN], const char *const *positions,
-                 const int *sizes, int length, uint64_t *attempts, bfc_result_t *result) {
+                 const int *sizes, int length, uint64_t *attempts,
+                 double t0, const char *label, bfc_result_t *result) {
     int idx[BFC_MAX_PASSWORD];
     char candidate[BFC_MAX_PASSWORD];
     for (int i = 0; i < length; i++) idx[i] = 0;
@@ -62,6 +74,7 @@ static int sweep(const uint8_t target[BFC_HASH_LEN], const char *const *position
         for (int i = 0; i < length; i++) candidate[i] = positions[i][idx[i]];
         candidate[length] = '\0';
         if (try_candidate(target, candidate, attempts, result)) return 1;
+        if ((*attempts & (BFC_PROGRESS_STEP - 1)) == 0) show_progress(label, *attempts, t0);
 
         int pos = length - 1;
         while (pos >= 0) {
@@ -93,8 +106,9 @@ bfc_result_t bfc_attack_brute(const uint8_t target[BFC_HASH_LEN],
     uint64_t attempts = 0;
     double t0 = now_seconds();
     for (int len = min_len; len <= max_len; len++) {
-        if (sweep(target, positions, sizes, len, &attempts, &r)) break;
+        if (sweep(target, positions, sizes, len, &attempts, t0, "brute", &r)) break;
     }
+    if (attempts >= BFC_PROGRESS_STEP) fputc('\n', stderr);
     r.attempts = attempts;
     r.seconds = now_seconds() - t0;
     return r;
@@ -224,7 +238,8 @@ bfc_result_t bfc_attack_mask(const uint8_t target[BFC_HASH_LEN], const char *mas
 
     uint64_t attempts = 0;
     double t0 = now_seconds();
-    sweep(target, positions, sizes, length, &attempts, &r);
+    sweep(target, positions, sizes, length, &attempts, t0, "mask", &r);
+    if (attempts >= BFC_PROGRESS_STEP) fputc('\n', stderr);
     r.attempts = attempts;
     r.seconds = now_seconds() - t0;
     return r;

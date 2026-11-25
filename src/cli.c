@@ -110,6 +110,63 @@ static void bfc_format_duration(double seconds, char *buf, size_t cap) {
     }
 }
 
+/* Which flags were supplied, so we can reject ones foreign to the mode. */
+enum {
+    SEEN_HASH     = 1 << 0,
+    SEEN_CHARSET  = 1 << 1,
+    SEEN_MIN      = 1 << 2,
+    SEEN_MAX      = 1 << 3,
+    SEEN_WORDLIST = 1 << 4,
+    SEEN_RULES    = 1 << 5,
+    SEEN_MASKPAT  = 1 << 6,
+    SEEN_PASSWORD = 1 << 7,
+    SEEN_LEAK     = 1 << 8,
+    SEEN_ITER     = 1 << 9
+};
+
+static const char *bfc_mode_name(bfc_mode_t m) {
+    switch (m) {
+        case MODE_BRUTE:   return "--brute";
+        case MODE_DICT:    return "--dict";
+        case MODE_MASK:    return "--mask";
+        case MODE_ANALYZE: return "--analyze";
+        case MODE_DEFEND:  return "--defend";
+        default:           return "this mode";
+    }
+}
+
+/* Reports the first flag that does not belong to the chosen mode. */
+static int bfc_reject_foreign_flags(bfc_mode_t mode, int seen) {
+    int allowed = 0;
+    switch (mode) {
+        case MODE_BRUTE:   allowed = SEEN_HASH | SEEN_CHARSET | SEEN_MIN | SEEN_MAX; break;
+        case MODE_DICT:    allowed = SEEN_HASH | SEEN_WORDLIST | SEEN_RULES;         break;
+        case MODE_MASK:    allowed = SEEN_HASH | SEEN_MASKPAT;                       break;
+        case MODE_ANALYZE: allowed = SEEN_PASSWORD | SEEN_LEAK;                      break;
+        case MODE_DEFEND:  allowed = SEEN_ITER;                                      break;
+        default:           allowed = 0;                                             break;
+    }
+
+    int foreign = seen & ~allowed;
+    if (foreign == 0) return 0;
+
+    static const struct { int bit; const char *name; } names[] = {
+        { SEEN_HASH, "--hash" },         { SEEN_CHARSET, "--charset" },
+        { SEEN_MIN, "--min" },           { SEEN_MAX, "--max" },
+        { SEEN_WORDLIST, "--wordlist" }, { SEEN_RULES, "--rules" },
+        { SEEN_MASKPAT, "--mask" },      { SEEN_PASSWORD, "--password" },
+        { SEEN_LEAK, "--leak" },         { SEEN_ITER, "--iter" }
+    };
+    for (size_t i = 0; i < sizeof(names) / sizeof(names[0]); i++) {
+        if (foreign & names[i].bit) {
+            fprintf(stderr, "error: %s is not valid with %s\n",
+                    names[i].name, bfc_mode_name(mode));
+            return 1;
+        }
+    }
+    return 1;
+}
+
 int bfc_parse_args(int argc, char **argv, bfc_options_t *opt) {
     if (opt == NULL) {
         fprintf(stderr, "error: internal error (opt is NULL)\n");
@@ -132,7 +189,7 @@ int bfc_parse_args(int argc, char **argv, bfc_options_t *opt) {
 
     int mode_given = 0;
     int mask_flag_seen = 0;
-    
+    int seen = 0;
     long tmp = 0;
 
     for (int i = 1; i < argc; i++) {
@@ -162,6 +219,7 @@ int bfc_parse_args(int argc, char **argv, bfc_options_t *opt) {
                     fprintf(stderr, "error: --mask pattern is too long\n");
                     return 1;
                 }
+                seen |= SEEN_MASKPAT;
             }
         } else if (strcmp(arg, "--analyze") == 0) {
             opt->mode = MODE_ANALYZE;
@@ -171,6 +229,7 @@ int bfc_parse_args(int argc, char **argv, bfc_options_t *opt) {
             mode_given = 1;
         } else if (strcmp(arg, "--rules") == 0) {
             opt->apply_rules = 1;
+            seen |= SEEN_RULES;
         } else if (strcmp(arg, "--hash") == 0) {
             const char *v = bfc_next_value(argc, argv, i, "--hash");
             if (v == NULL) return 1;
@@ -182,6 +241,7 @@ int bfc_parse_args(int argc, char **argv, bfc_options_t *opt) {
                 return 1;
             }
             bfc_copy_bounded(opt->target_hex, sizeof(opt->target_hex), v);
+            seen |= SEEN_HASH;
         } else if (strcmp(arg, "--password") == 0) {
             const char *v = bfc_next_value(argc, argv, i, "--password");
             if (v == NULL) return 1;
@@ -191,23 +251,27 @@ int bfc_parse_args(int argc, char **argv, bfc_options_t *opt) {
                         BFC_MAX_PASSWORD - 1);
                 return 1;
             }
+            seen |= SEEN_PASSWORD;
         } else if (strcmp(arg, "--charset") == 0) {
             const char *v = bfc_next_value(argc, argv, i, "--charset");
             if (v == NULL) return 1;
             i++;
             if (bfc_parse_charset(v, &opt->charset) != 0) return 1;
+            seen |= SEEN_CHARSET;
         } else if (strcmp(arg, "--min") == 0) {
             const char *v = bfc_next_value(argc, argv, i, "--min");
             if (v == NULL) return 1;
             i++;
             if (bfc_parse_uint(v, "--min", &tmp) != 0) return 1;
             opt->min_len = (int)tmp;
+            seen |= SEEN_MIN;
         } else if (strcmp(arg, "--max") == 0) {
             const char *v = bfc_next_value(argc, argv, i, "--max");
             if (v == NULL) return 1;
             i++;
             if (bfc_parse_uint(v, "--max", &tmp) != 0) return 1;
             opt->max_len = (int)tmp;
+            seen |= SEEN_MAX;
         } else if (strcmp(arg, "--wordlist") == 0) {
             const char *v = bfc_next_value(argc, argv, i, "--wordlist");
             if (v == NULL) return 1;
@@ -216,6 +280,7 @@ int bfc_parse_args(int argc, char **argv, bfc_options_t *opt) {
                 fprintf(stderr, "error: --wordlist path is too long\n");
                 return 1;
             }
+            seen |= SEEN_WORDLIST;
         } else if (strcmp(arg, "--leak") == 0) {
             const char *v = bfc_next_value(argc, argv, i, "--leak");
             if (v == NULL) return 1;
@@ -224,12 +289,14 @@ int bfc_parse_args(int argc, char **argv, bfc_options_t *opt) {
                 fprintf(stderr, "error: --leak path is too long\n");
                 return 1;
             }
+            seen |= SEEN_LEAK;
         } else if (strcmp(arg, "--iter") == 0) {
             const char *v = bfc_next_value(argc, argv, i, "--iter");
             if (v == NULL) return 1;
             i++;
             if (bfc_parse_uint(v, "--iter", &tmp) != 0) return 1;
             opt->iterations = (uint32_t)tmp;
+            seen |= SEEN_ITER;
         } else {
             fprintf(stderr, "error: unknown argument \"%s\" (see --help)\n", arg);
             return 1;
@@ -240,6 +307,8 @@ int bfc_parse_args(int argc, char **argv, bfc_options_t *opt) {
         fprintf(stderr, "error: no mode given, see --help\n");
         return 1;
     }
+
+    if (bfc_reject_foreign_flags(opt->mode, seen) != 0) return 1;
 
     /* Per-mode required-argument validation. */
     switch (opt->mode) {
