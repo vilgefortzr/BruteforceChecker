@@ -1,4 +1,4 @@
-/* test_analyze.c — owner: Daria. Basic sanity checks for analyze.c. */
+/* Sanity checks for analyze.c. */
 #include "analyze.h"
 #include <assert.h>
 #include <stdio.h>

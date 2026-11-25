@@ -1,13 +1,4 @@
-/* main.c -- entry point: parse args, dispatch to the right module,
- * print the result.
- *
- * Owner: Anastasia (CLI & parsing). This file only calls functions
- * already defined in attack.h / analyze.h / sha256.h / cli.h; it does
- * not reimplement any attack or analysis logic itself.
- *
- * Builds clean under -std=c11 -Wall -Wextra.
- */
-
+/* Entry point: parse arguments, dispatch to the selected mode, print the result. */
 #include "cli.h"
 #include "attack.h"
 #include "analyze.h"
@@ -88,7 +79,6 @@ int main(int argc, char **argv) {
 
         case MODE_NONE:
         default:
-        
             fprintf(stderr, "error: no mode selected, see --help\n");
             return 1;
     }

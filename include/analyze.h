@@ -12,13 +12,13 @@ typedef struct {
     char     verdict[32];     /* "very weak" .. "strong" */
 } bfc_strength_t;
 
-/* Analyzes the strength of a plaintext password (no cracking involved). (item 3) */
+/* Analyzes the strength of a plaintext password (no cracking involved). */
 bfc_strength_t bfc_analyze(const char *password, const char *leak_list_path);
 
 /* Measures this machine's SHA-256 throughput (hashes/sec). */
 double bfc_bench_hashrate(void);
 
-/* Benchmark: plain hash vs. stretched hash. Fills hps for each. (item 4) */
+/* Benchmark: plain hash vs. stretched hash. Fills hps for each. */
 void bfc_bench_stretch(uint32_t iterations, double *raw_hps, double *stretched_hps);
 
 #endif /* BFC_ANALYZE_H */

@@ -1,18 +1,4 @@
-/* analyze.c — stats & timing module 
- *
- * Implements exactly the signatures frozen in include/analyze.h:
- *   bfc_analyze()
- *   bfc_bench_hashrate()
- *   bfc_bench_stretch()
- *
- * Rules followed:
- *   - Only this file is touched; all headers in include/ are frozen and untouched.
- *   - SHA-256 primitives are *called*, not reimplemented (owner: Антоній).
- *   - No global state; everything flows through arguments / structs.
- *   - Every public function checks pointer arguments for NULL.
- *   - Builds clean under -std=c11 -Wall -Wextra.
- */
-
+/* Password strength analysis and SHA-256 hash-rate benchmarks. */
 #define _POSIX_C_SOURCE 199309L
 
 #include "analyze.h"
@@ -28,10 +14,8 @@
 /* Internal helpers                                                     */
 /* ------------------------------------------------------------------ */
 
-/* A small, fixed set of very common base words / patterns used only to
- * penalize "looks complex but is actually a known word in disguise"
- * passwords (e.g. "P@ssw0rd", "Qwerty123"). This is a heuristic, not
- * the leak-list check (that part reads leak_list_path separately). */
+/* Common base words used to penalize "looks complex but is a known word
+ * in disguise" passwords (e.g. "P@ssw0rd"). Separate from the leak list. */
 static const char *const BFC_COMMON_BASE_WORDS[] = {
     "password", "qwerty", "qwerty123", "admin", "welcome", "login",
     "dragon", "monkey", "master", "summer", "winter", "autumn", "spring",
