@@ -33,8 +33,7 @@ The cracking modes take a ready-made SHA-256 hash, not a raw password —
 the same way real systems store credentials. Produce one with:
 
 ```sh
-printf '%s' 'yourpassword' | sha256sum        # shell
-python3 -c "import hashlib; print(hashlib.sha256(b'yourpassword').hexdigest())"
+printf '%s' 'yourpassword' | sha256sum
 ```
 
 ## Usage
@@ -101,38 +100,11 @@ H=$(printf '%s' 'Summer2024' | sha256sum | cut -d' ' -f1)
 # 5. Key stretching collapses brute-force throughput.
 ./bfc --defend --iter 100000
 ```
-
-## Project layout
-
-```
-include/   common.h sha256.h attack.h analyze.h cli.h   — shared API (headers)
-src/       sha256.c    SHA-256, hex, key stretching
-           attack.c    brute / dictionary / mask attacks
-           analyze.c   entropy, crack-time models, defender benchmark
-           cli.c       argument parsing and output formatting
-           main.c      entry point and mode dispatch
-data/      wordlist.txt, leaks.txt   — short demo lists (swap in larger ones
-                                        via --wordlist / --leak)
-tests/     test_attack.c test_analyze.c test_cli.c
-```
-
-Modules communicate only through the headers in `include/`; the result and
-option structs live in `common.h`.
-
 ## Tests
 
-Each module has a standalone sanity-check program under `tests/`, not part
-of `make bfc`. Build and run by hand:
+Each module has a standalone sanity-check program under `tests/`, separate
+from the `bfc` binary. Build and run them all with:
 
 ```sh
-cc -std=c11 -Wall -Wextra -Iinclude tests/test_attack.c  src/attack.c  src/sha256.c -o /tmp/t_attack       && /tmp/t_attack
-cc -std=c11 -Wall -Wextra -Iinclude tests/test_analyze.c src/analyze.c src/sha256.c -o /tmp/t_analyze -lm   && /tmp/t_analyze
-cc -std=c11 -Wall -Wextra -Iinclude tests/test_cli.c     src/cli.c                  -o /tmp/t_cli           && /tmp/t_cli
+make tests
 ```
-
-## Notes
-
-- SHA-256 lives in `src/sha256.c`, adapted from a public FIPS 180-4
-  reference implementation.
-- `--defend` uses plain iterated SHA-256 to illustrate the principle; real
-  systems use purpose-built KDFs (bcrypt, scrypt, Argon2, PBKDF2).

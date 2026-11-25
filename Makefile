@@ -10,7 +10,13 @@ bfc: $(OBJ)
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-clean:
-	rm -f src/*.o bfc
+tests:
+	$(CC) $(CFLAGS) tests/test_attack.c  src/attack.c  src/sha256.c -o tests/test_attack.out  $(LDLIBS) && ./tests/test_attack.out
+	$(CC) $(CFLAGS) tests/test_analyze.c src/analyze.c src/sha256.c -o tests/test_analyze.out $(LDLIBS) && ./tests/test_analyze.out
+	$(CC) $(CFLAGS) tests/test_cli.c     src/cli.c                  -o tests/test_cli.out     $(LDLIBS) && ./tests/test_cli.out
+	rm -f tests/*.out
 
-.PHONY: clean
+clean:
+	rm -f src/*.o bfc tests/*.out
+
+.PHONY: clean tests
