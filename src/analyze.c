@@ -10,10 +10,6 @@
 #include <string.h>
 #include <time.h>
 
-/* ------------------------------------------------------------------ */
-/* Internal helpers                                                     */
-/* ------------------------------------------------------------------ */
-
 /* Common base words used to penalize "looks complex but is a known word
  * in disguise" passwords (e.g. "P@ssw0rd"). Separate from the leak list. */
 static const char *const BFC_COMMON_BASE_WORDS[] = {
@@ -125,10 +121,6 @@ static int bfc_check_leak_list(const char *password, const char *leak_list_path)
     fclose(fp);
     return found;
 }
-
-/* ------------------------------------------------------------------ */
-/* Public API (include/analyze.h)                                      */
-/* ------------------------------------------------------------------ */
 
 bfc_strength_t bfc_analyze(const char *password, const char *leak_list_path) {
     bfc_strength_t result;
