@@ -1,4 +1,4 @@
-# BruteforceChecker (bfc)
+# BruteforceChecker
 
 Offline C-based SHA-256 password strength analyzer and brute-force
 benchmark tool. Given a SHA-256 hash, `bfc` shows how long the password
